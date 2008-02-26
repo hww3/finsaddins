@@ -18,6 +18,12 @@ inherit Fins.DocController;
 //! which will be placed in the current session as "user".
 function(Fins.Request,Fins.Response,Fins.Templates.View:mixed) find_user = default_find_user;
 
+//! method which is called to locate a user's password.
+//! this method accepts the request object and should return either a
+//! user object with "email" and "password" fields, or a mapping with these
+//! two indices.
+function(Fins.Request,Fins.Response,Fins.Templates.View:mixed) find_user_password = default_find_user_password;
+
 //! 
 object|function default_action;
 
@@ -40,6 +46,33 @@ static mixed default_find_user(Request id, Response response, Templates.View t)
 
   if(r && sizeof(r)) return r[0];
   else return 0;
+}
+
+//! the name of the template to use for sending the password via email.
+string password_template_name = "auth/sendpassword";
+
+//! default user authenticator
+static mixed default_find_user_password(Request id, Response response, Templates.View t)
+{
+  mixed r = Fins.Model.find.users( ([ "username": id->variables->username,
+                                    ]) );
+
+  t->add("username", id->variables->username);
+
+  if(r && sizeof(r)) return r[0];
+  else return 0;
+}
+
+//! override this method to set the mail host for retrieved password emails.
+static string get_mail_host()
+{
+  return gethostname();
+}
+
+//! override this method to set the return address for retrieved password emails.
+static string get_return_address()
+{
+  return "password-retrieval@" + gethostname();
 }
 
 // _login is used for ajaxy logins.
@@ -96,32 +129,28 @@ public void logout(Request id, Response response, Templates.View t, mixed ... ar
   response->redirect(id->referrer||default_action);
 }
 
-public void forgotpassword(Request id, Response response, mixed ... args)
+public void forgotpassword(Request id, Response response, Templates.View t, mixed ... args)
 {
-  if(id->variables->username)
+  mixed r = find_user_password(id, response, t);
+
+  if(!r)
   {
-    t->add("username", id->variables->username);
-    array a = find.users((["username": id->variables->username]));
+    response->flash("Unable to find a user account with that username. Please try again.\n");
+  }
+  else
+  {
+    object tp = view->get_idview(password_template_name);
 
-    if(!sizeof(a))
-    {
-      response->flash("Unable to find a user account with that username. Please try again.\n");
-    }
-    else
-    {
-      object tp = view->get_idview("exec/sendpassword");
+    tp->add("password", r["password"]);
 
-      tp->add("password", a[0]["password"]);
+    string mailmsg = tp->render();
 
-      string mailmsg = tp->render();
-
-      Protocols.SMTP.Client(app->get_sys_pref("mail.host")->get_value())->simple_mail(a[0]["email"],
+    Protocols.SMTP.Client(get_mail_host())->simple_mail(r["email"],
                               "Your FinScribe password",
-                              app->get_sys_pref("mail.return_address")->get_value(),
+                              get_return_address(),
                               mailmsg);
 
-      response->flash("msg", "Your password has been located and will be sent to the email address on record for your account.\n");
-                                response->redirect("/exec/login");
-                        }
+    response->flash("Your password has been located and will be sent to the email address on record for your account.\n");
+    response->redirect(login);
    }
 }

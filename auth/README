@@ -1,2 +1,26 @@
 This is a Fins controller and set of templates for providing user 
 authentication in an application.
+
+To make an entire controller accessible by authenticated users only,
+you'd add the following to your controller:
+
+static void start()
+{
+  before_filter(app->admin_user_filter);
+}
+
+Where admin_user_filter is a method that looks like:
+
+
+int admin_user_filter(Fins.Request id, Fins.Response response, mixed ... args)
+{
+   if(!id->misc->session_variables->user)
+   {
+      response->flash("msg", "You must login to perform this action.");
+      response->redirect(app->controller->auth->login, 0, ([ "return_to": id->not_query ]));
+      return 0;
+   }
+
+   return 1;
+}
+

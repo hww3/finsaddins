@@ -1,0 +1,6 @@
+This project contains a set of prebuilt "cookbook" components for use in 
+Fins applications. 
+
+auth
+  a controller and templates that enable user authentication using
+  forms and the session object.

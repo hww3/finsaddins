@@ -1,3 +1,5 @@
+import Fins;
+
 inherit Fins.DocController;
 
 //! this is a sample authentication handler module which can be customized
@@ -16,13 +18,13 @@ inherit Fins.DocController;
 //! this method accepts the request object and should return 
 //! zero if the user was not successfully authenticated, or a value
 //! which will be placed in the current session as "user".
-function(Fins.Request,Fins.Response,Fins.Templates.View:mixed) find_user = default_find_user;
+function(Fins.Request,Fins.Response,Fins.Template.View:mixed) find_user = default_find_user;
 
 //! method which is called to locate a user's password.
 //! this method accepts the request object and should return either a
 //! user object with "email" and "password" fields, or a mapping with these
 //! two indices.
-function(Fins.Request,Fins.Response,Fins.Templates.View:mixed) find_user_password = default_find_user_password;
+function(Fins.Request,Fins.Response,Fins.Template.View:mixed) find_user_password = default_find_user_password;
 
 //! 
 object|function default_action;
@@ -36,7 +38,7 @@ static void start()
 }
 
 //! default user authenticator
-static mixed default_find_user(Request id, Response response, Templates.View t)
+static mixed default_find_user(Request id, Response response, Template.View t)
 {
   mixed r = Fins.Model.find.users( ([ "username": id->variables->username,
                                       "password": id->variables->password 
@@ -52,7 +54,7 @@ static mixed default_find_user(Request id, Response response, Templates.View t)
 string password_template_name = "auth/sendpassword";
 
 //! default user authenticator
-static mixed default_find_user_password(Request id, Response response, Templates.View t)
+static mixed default_find_user_password(Request id, Response response, Template.View t)
 {
   mixed r = Fins.Model.find.users( ([ "username": id->variables->username,
                                     ]) );
@@ -78,7 +80,7 @@ static string get_return_address()
 // _login is used for ajaxy logins.
 function _login = login;
 
-public void login(Request id, Response response, Templates.View t, mixed ... args)
+public void login(Request id, Response response, Template.View t, mixed ... args)
 {
 
    if(!id->variables->return_to)
@@ -95,7 +97,7 @@ public void login(Request id, Response response, Templates.View t, mixed ... arg
          return;
          break;
       default:
-        mixed r = find_user(id->variables, args);
+        mixed r = find_user(id, response, t);
         if(r)
         {
            // success!
@@ -117,7 +119,7 @@ public void login(Request id, Response response, Templates.View t, mixed ... arg
    t->add("return_to", id->variables->return_to);
 }
 
-public void logout(Request id, Response response, Templates.View t, mixed ... args)
+public void logout(Request id, Response response, Template.View t, mixed ... args)
 {
   if(id->misc->session_variables->userid)
   {
@@ -129,7 +131,7 @@ public void logout(Request id, Response response, Templates.View t, mixed ... ar
   response->redirect(id->referrer||default_action);
 }
 
-public void forgotpassword(Request id, Response response, Templates.View t, mixed ... args)
+public void forgotpassword(Request id, Response response, Template.View t, mixed ... args)
 {
   mixed r = find_user_password(id, response, t);
 

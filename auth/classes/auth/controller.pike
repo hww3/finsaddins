@@ -32,7 +32,7 @@ object|function default_action;
 //! default startup method. sets @[default_action] to be the root of the 
 //! current application. custom applications should override this method 
 //! and set this value appropriately.
-static void start()
+void start()
 {
   default_action = app->controller;
 }
@@ -82,7 +82,6 @@ function _login = login;
 
 public void login(Request id, Response response, Template.View t, mixed ... args)
 {
-
    if(!id->variables->return_to)
    {
       id->variables->return_to = ((id->misc->flash && id->misc->flash->from) ||
@@ -96,13 +95,13 @@ public void login(Request id, Response response, Template.View t, mixed ... args
          response->redirect(id->variables->return_to || default_action);
          return;
          break;
-      default:
+      case "Login":
         mixed r = find_user(id, response, t);
         if(r)
         {
            // success!
            id->misc->session_variables->logout = 0;
-           id->misc->session_variables["user"] = r[0];
+           id->misc->session_variables["user"] = r;
            if(search(id->variables->return_to, "?") < -1)
              id->variables->return_to = id->variables->return_to + "&" + time();
            else
@@ -133,26 +132,31 @@ public void logout(Request id, Response response, Template.View t, mixed ... arg
 
 public void forgotpassword(Request id, Response response, Template.View t, mixed ... args)
 {
-  mixed r = find_user_password(id, response, t);
 
-  if(!r)
+  switch(id->variables->action)
   {
-    response->flash("Unable to find a user account with that username. Please try again.\n");
-  }
-  else
-  {
-    object tp = view->get_idview(password_template_name);
+    case "Locate":
+      mixed r = find_user_password(id, response, t);
 
-    tp->add("password", r["password"]);
+      if(!r)
+      {
+        response->flash("Unable to find a user account with that username. Please try again.\n");
+      }
+      else
+      {
+        object tp = view->get_view(password_template_name);
 
-    string mailmsg = tp->render();
+        tp->add("password", r["password"]);
 
-    Protocols.SMTP.Client(get_mail_host())->simple_mail(r["email"],
-                              "Your FinScribe password",
+        string mailmsg = tp->render();
+
+        Protocols.SMTP.Client(get_mail_host())->simple_mail(r["email"],
+                              "Your password",
                               get_return_address(),
                               mailmsg);
 
-    response->flash("Your password has been located and will be sent to the email address on record for your account.\n");
-    response->redirect(login);
-   }
+        response->flash("Your password has been located and will be sent to the email address on record for your account.\n");
+        response->redirect(login);
+       }
+  }
 }

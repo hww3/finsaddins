@@ -102,6 +102,8 @@ public void login(Request id, Response response, Template.View t, mixed ... args
            // success!
            id->misc->session_variables->logout = 0;
            id->misc->session_variables["user"] = r;
+           if(arrayp(id->variables->return_to))
+             id->variables->return_to = id->variables->return_to[0];
            if(search(id->variables->return_to, "?") < -1)
              id->variables->return_to = id->variables->return_to + "&" + time();
            else

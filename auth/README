@@ -26,3 +26,7 @@ int admin_user_filter(Fins.Request id, Fins.Response response, mixed ... args)
 
 You should edit classes/auth/controller and edit the two user modifyable methods to 
 fit your application's data model.
+
+CHANGES
+
+20110311 - added change password functionality

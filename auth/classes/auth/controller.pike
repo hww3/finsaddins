@@ -197,7 +197,7 @@ public void forgotpassword(Request id, Response response, Template.View t, mixed
       }
       else
       {
-        object tp = view->get_view(password_template_name);
+        object tp = view->low_get_view(__default_template, password_template_name);
 
         tp->add("password", r["password"]);
 

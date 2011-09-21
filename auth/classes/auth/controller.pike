@@ -46,13 +46,12 @@ void start()
   default_action = app->controller;
 }
 
-//! default user authenticator
-static mixed default_find_user(Request id, Response response, Template.View t)
-{
-//array r = ({id->variables->username});
-
+//! default user authenticator, for data models where a user object represents 
+//! a user and the password is saved as a plain text string. 
+static mixed default_find_user(Request id, Response response, Template.View t) 
+{ 
   mixed r = Fins.Model.find.users( ([ "username": id->variables->username,
-                                      "password": id->variables->password 
+                                      "password": id->variables->password
                                     ]) );
 
   t->add("username", id->variables->username);
@@ -61,16 +60,58 @@ static mixed default_find_user(Request id, Response response, Template.View t)
   else return 0;
 }
 
+
+//! default user authenticator, for data models where a user object represents
+//! a user and the password field contains a MD5 crypt string.
+static mixed md5_find_user(Request id, Response response, Template.View t)
+{
+  mixed r = Fins.Model.find.users( ([ "username": id->variables->username,
+                                    ]) );
+
+  if(r && (sizeof(r)== 1) && Crypto.verify_crypt_md5(id->variables->password, r[0]["password"]))
+  {
+    t->add("username", id->variables->username);
+    return 1;
+  }
+
+  // failure!
+  return 0;
+}
+
 //! the name of the template to use for sending the password via email.
 string password_template_name = "auth/sendpassword";
 
 //! default password changer
+//!
+//! changes a user's password by setting the text of a field to the new value.
+//! 
+//! @note
+//!  this method receives a password which the user has typed twice (in order
+//!  to prevent typos. This method should perform other QA checks if necessary
+//!  (such as password complexity and aging tests).
 static mixed default_reset_password(Request id, Response response, Template.View t, mixed user, string newpassword)
 {
   user["password"] = newpassword;
   return 1;
 }
 
+//! MD5 based password changer
+//!
+//! changes a user's password by setting the password field to an MD5 hash.
+//! 
+//! @note
+//!  this method receives a password which the user has typed twice (in order
+//!  to prevent typos. This method should perform other QA checks if necessary
+//!  (such as password complexity and aging tests).
+//!
+//! @note
+//!  this method requires a field length longer than the maximum acceptable
+//!  password length. 
+static mixed md5_reset_password(Request id, Response response, Template.View t, mixed user, string newpassword)
+{
+  user["password"] = Crypto.make_crypt_md5(newpassword);
+  return 1;
+}
 
 //! default user authenticator
 static mixed default_find_user_password(Request id, Response response, Template.View t)

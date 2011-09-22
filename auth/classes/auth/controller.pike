@@ -139,7 +139,7 @@ static mixed md5_find_user_password(Request id, Response response, Template.View
 
   t->add("username", id->variables->username);
 
-  string newpass = generate_password();
+  string newpass = Tools.String.generate_password(10);
 
   r[0]["password"] = Crypto.make_crypt_md5(newpass);
 

@@ -16,11 +16,11 @@ protected program __default_template = Fins.Template.Simple;
 //! which will be used to determine the url the application will return to
 //! following a successful authentication.
 
-//! method which is called to determine if a user should be authenticated.
+//! method which is called to determine if a user should be considered "authenticated".
 //! this method accepts the request object and should return 
 //! zero if the user was not successfully authenticated, or a value
 //! which will be placed in the current session as "user".
-function(Fins.Request,Fins.Response,Fins.Template.View:mixed) find_user = default_find_user;
+function(Fins.Request,Fins.Response,Fins.Template.View:mixed) validate_user = default_validate_user;
 
 //! method which is called to locate a user's password.
 //! this method accepts the request object and should return either a
@@ -48,7 +48,7 @@ void start()
 
 //! default user authenticator, for data models where a user object represents 
 //! a user and the password is saved as a plain text string. 
-static mixed default_find_user(Request id, Response response, Template.View t) 
+static mixed default_validate_user(Request id, Response response, Template.View t) 
 { 
   mixed r = Fins.Model.find.users( ([ "username": id->variables->username,
                                       "password": id->variables->password
@@ -63,7 +63,7 @@ static mixed default_find_user(Request id, Response response, Template.View t)
 
 //! default user authenticator, for data models where a user object represents
 //! a user and the password field contains a MD5 crypt string.
-static mixed md5_find_user(Request id, Response response, Template.View t)
+static mixed md5_validate_user(Request id, Response response, Template.View t)
 {
   mixed r = Fins.Model.find.users( ([ "username": id->variables->username,
                                     ]) );
@@ -71,7 +71,7 @@ static mixed md5_find_user(Request id, Response response, Template.View t)
   if(r && (sizeof(r)== 1) && Crypto.verify_crypt_md5(id->variables->password, r[0]["password"]))
   {
     t->add("username", id->variables->username);
-    return 1;
+    return r[0];
   }
 
   // failure!
@@ -113,7 +113,8 @@ static mixed md5_reset_password(Request id, Response response, Template.View t, 
   return 1;
 }
 
-//! default user authenticator
+//! default user password locator
+//! 
 static mixed default_find_user_password(Request id, Response response, Template.View t)
 {
 
@@ -124,6 +125,31 @@ static mixed default_find_user_password(Request id, Response response, Template.
 
   if(r && sizeof(r)) return r[0];
   else return 0;
+}
+
+//! MD5-crypt based user password locator
+//! 
+//! @note
+//!  this method will reset the password of the user, as the original password isn't available.
+static mixed md5_find_user_password(Request id, Response response, Template.View t)
+{
+
+  mixed r = Fins.Model.find.users( ([ "username": id->variables->username
+                                    ]) );
+
+  t->add("username", id->variables->username);
+
+  string newpass = generate_password();
+
+  r[0]["password"] = Crypto.make_crypt_md5(newpass);
+
+  if(r && sizeof(r)) return (["email": r[0]["email"], "password": newpass]);
+  else return 0;
+}
+
+static string generate_password()
+{
+  return "";
 }
 
 //! override this method to set the mail host for retrieved password emails.
@@ -157,7 +183,7 @@ public void login(Request id, Response response, Template.View t, mixed ... args
          return;
          break;
       case "Login":
-        mixed r = find_user(id, response, t);
+        mixed r = validate_user(id, response, t);
         if(r)
         {
            // success!
@@ -200,7 +226,7 @@ public void changepassword(Request id, Response response, Template.View t, mixed
   switch(id->variables->action)
   {
     case "Reset":
-        mixed r = find_user(id, response, t);
+        mixed r = validate_user(id, response, t);
         if(r)
         {
            // success!

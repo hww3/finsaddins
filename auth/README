@@ -1,5 +1,14 @@
 This is a Fins controller and set of templates for providing user 
-authentication in an application.
+authentication in an application. This module includes code for dealing
+with passwords stored in clear text form, as well as MD5-crypted password
+strings. The default configuration uses plain text passwords, to change to
+MD5-crypted passwords, modify the auth class so that the 3 function place
+holder variables point to the respective MD5 enabled functions contained
+in the auth class (md5_validate_user, md5_reset_password and md5_find_user_password)
+
+The default methods in the controller assume that the user object
+is called "User", and that the user's login name field is called 
+"username" and that the password is stored in a field called "password".
 
 To make an entire controller accessible by authenticated users only,
 you'd add the following to your controller:
@@ -29,4 +38,5 @@ fit your application's data model.
 
 CHANGES
 
+20110921 - added support for using MD5-crypt'ed passwords
 20110311 - added change password functionality

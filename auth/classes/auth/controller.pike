@@ -20,19 +20,29 @@ protected program __default_template = Fins.Template.Simple;
 //! this method accepts the request object and should return 
 //! zero if the user was not successfully authenticated, or a value
 //! which will be placed in the current session as "user".
-function(Fins.Request,Fins.Response,Fins.Template.View:mixed) validate_user = default_validate_user;
+function(Fins.Request,Fins.Response,Fins.Template.View:mixed...) validate_user = default_validate_user;
 
 //! method which is called to locate a user's password.
 //! this method accepts the request object and should return either a
 //! user object with "email" and "password" fields, or a mapping with these
 //! two indices.
-function(Fins.Request,Fins.Response,Fins.Template.View:mixed) find_user_password = default_find_user_password;
+function(Fins.Request,Fins.Response,Fins.Template.View:mixed...) find_user_password = default_find_user_password;
 
 //! method which is called to reset a user's password.
 //! 
 //! @returns
 //!   0 upon failure, should also set response flash message describing the difficulty.
-function(Fins.Request,Fins.Response,Fins.Template.View,mixed,string:mixed) reset_password = default_reset_password;
+function(Fins.Request,Fins.Response,Fins.Template.View,mixed,string:mixed...) reset_password = default_reset_password;
+
+
+//! method which is called upon successful login
+function(Fins.Request,Fins.Response,Fins.Template.View,mixed...:void) on_login;
+
+//! method which is called upon successful logout
+function(Fins.Request,Fins.Response,Fins.Template.View,mixed...:void) on_logout;
+
+//! method which is called upon successful password reset
+function(Fins.Request,Fins.Response,Fins.Template.View,mixed...:void) on_reset;
 
 
 //! 
@@ -196,6 +206,8 @@ public void login(Request id, Response response, Template.View t, mixed ... args
            else
              id->variables->return_to = id->variables->return_to + "?" + time();
            response->redirect(id->variables->return_to || default_action);
+           if(on_login) on_login(id, response, t, @args);
+           
            return;
         }
         else
@@ -217,6 +229,7 @@ public void logout(Request id, Response response, Template.View t, mixed ... arg
 
   response->flash("You have been successfully logged out.");
   response->redirect(id->referrer||default_action);
+  if(on_logout) on_logout(id, response, t, @args);
 }
 
 public void changepassword(Request id, Response response, Template.View t, mixed ... args)
@@ -233,8 +246,16 @@ public void changepassword(Request id, Response response, Template.View t, mixed
            if((id->variables->newpassword && strlen(id->variables->newpassword)) && id->variables->newpassword == id->variables->newpassword2 )
            {
               if(reset_password(id, response, t, r, id->variables->newpassword))
-               response->flash("Password reset successfully.");
-               response->redirect(login, ({}), (["return_to": id->variables->return_to]));
+              {
+                response->flash("Password reset successfully.");
+                response->redirect(login, ({}), (["return_to": id->variables->return_to]));
+                if(on_reset) on_reset(id, response, t, @args);               
+              }
+              else
+              {
+                response->flash("Password reset failed.");
+                
+              }
            }
            else
            {
